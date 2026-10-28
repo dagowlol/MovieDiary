@@ -10,6 +10,7 @@ class Movie {
   final bool isWatched; // true: watched; false: in watchlist / plan-to-watch
   final String? review; // Optional personal review / thoughts
   final String watchedDate; // ISO date string 'YYYY-MM-DD' or timestamp
+  final String? posterUrl; // Optional poster image URL
 
   Movie({
     this.id,
@@ -21,6 +22,7 @@ class Movie {
     this.isWatched = false,
     this.review,
     this.watchedDate = '',
+    this.posterUrl,
   });
 
   // Convert Movie object to Map for SQLite insert/update
@@ -34,6 +36,7 @@ class Movie {
       Constants.colIsWatched: isWatched ? 1 : 0,
       Constants.colReview: review,
       Constants.colWatchedDate: watchedDate,
+      Constants.colPosterUrl: posterUrl,
     };
     if (id != null) {
       map[Constants.colId] = id;
@@ -53,6 +56,7 @@ class Movie {
       isWatched: (map[Constants.colIsWatched] as int? ?? 0) == 1,
       review: map[Constants.colReview] as String?,
       watchedDate: map[Constants.colWatchedDate] as String? ?? '',
+      posterUrl: map[Constants.colPosterUrl] as String?,
     );
   }
 
@@ -67,6 +71,7 @@ class Movie {
     bool? isWatched,
     String? review,
     String? watchedDate,
+    String? posterUrl,
   }) {
     return Movie(
       id: id ?? this.id,
@@ -78,12 +83,13 @@ class Movie {
       isWatched: isWatched ?? this.isWatched,
       review: review ?? this.review,
       watchedDate: watchedDate ?? this.watchedDate,
+      posterUrl: posterUrl ?? this.posterUrl,
     );
   }
 
   @override
   String toString() {
     return 'Movie(id: $id, title: $title, director: $director, releaseYear: $releaseYear, '
-        'genre: $genre, rating: $rating, isWatched: $isWatched, review: $review, watchedDate: $watchedDate)';
+        'genre: $genre, rating: $rating, isWatched: $isWatched, review: $review, watchedDate: $watchedDate, posterUrl: $posterUrl)';
   }
 }

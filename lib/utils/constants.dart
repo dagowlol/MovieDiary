@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class Constants {
   // Database Constants
   static const String dbName = 'movie_diary.db';
-  static const int dbVersion = 1;
+  static const int dbVersion = 2;
   static const String tableMovies = 'movies';
 
   static const String colId = 'id';
@@ -15,22 +15,23 @@ class Constants {
   static const String colIsWatched = 'is_watched';
   static const String colReview = 'review';
   static const String colWatchedDate = 'watched_date';
+  static const String colPosterUrl = 'poster_url';
 
   // Predefined Movie Genres
   static const List<String> movieGenres = [
+    'Sci-Fi',
     'Action',
-    'Adventure',
+    'Drama',
+    'Thriller',
     'Animation',
     'Comedy',
+    'Adventure',
     'Crime',
     'Documentary',
-    'Drama',
     'Fantasy',
     'Horror',
     'Mystery',
     'Romance',
-    'Sci-Fi',
-    'Thriller',
   ];
 
   // Colors & Styling

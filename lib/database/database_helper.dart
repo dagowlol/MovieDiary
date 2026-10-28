@@ -1,5 +1,8 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
-import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 import 'package:movie/models/movie.dart';
 import 'package:movie/utils/constants.dart';
 
@@ -10,20 +13,36 @@ class DatabaseHelper {
 
   DatabaseHelper._init();
 
+  static void ensureInitialized() {
+    if (kIsWeb) {
+      databaseFactory = databaseFactoryFfiWeb;
+    } else if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+    }
+  }
+
   Future<Database> get database async {
     if (_database != null) return _database!;
+    ensureInitialized();
     _database = await _initDB(Constants.dbName);
     return _database!;
   }
 
   Future<Database> _initDB(String filePath) async {
-    final dbPath = await getDatabasesPath();
-    final path = join(dbPath, filePath);
+    String path;
+    if (kIsWeb) {
+      path = filePath;
+    } else {
+      final dbPath = await getDatabasesPath();
+      path = join(dbPath, filePath);
+    }
 
     return await openDatabase(
       path,
       version: Constants.dbVersion,
       onCreate: _createDB,
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -38,9 +57,18 @@ class DatabaseHelper {
         ${Constants.colRating} REAL NOT NULL DEFAULT 0.0,
         ${Constants.colIsWatched} INTEGER NOT NULL DEFAULT 0,
         ${Constants.colReview} TEXT,
-        ${Constants.colWatchedDate} TEXT
+        ${Constants.colWatchedDate} TEXT,
+        ${Constants.colPosterUrl} TEXT
       )
     ''');
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute(
+        'ALTER TABLE ${Constants.tableMovies} ADD COLUMN ${Constants.colPosterUrl} TEXT',
+      );
+    }
   }
 
   // CREATE

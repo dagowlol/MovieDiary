@@ -10,12 +10,15 @@ class MovieDiaryApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Movie Diary',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: const Color(0xFF0D0F14),
+        colorScheme: const ColorScheme.dark(
+          primary: Color(0xFFF7BA34),
+          surface: Color(0xFF161922),
+        ),
         useMaterial3: true,
       ),
       home: const MovieFormScreen(),
     );
   }
 }
-
-
