@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:movie/database/database_helper.dart';
+import 'package:movie/features/library/library_screen.dart';
 import 'package:movie/features/movie_detail/movie_detail_screen.dart';
 import 'package:movie/features/movie_form/movie_form_screen.dart';
 import 'package:movie/features/statistics/statistics_screen.dart';
@@ -42,7 +43,7 @@ class _HomeShellState extends State<HomeShell> {
   @override
   Widget build(BuildContext context) {
     final screens = <Widget>[
-      const _LibraryHub(),
+      const LibraryScreen(),
       const WatchlistScreen(),
       const StatisticsScreen(),
     ];
