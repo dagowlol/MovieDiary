@@ -163,6 +163,101 @@ class _MovieFormScreenState extends State<MovieFormScreen> {
     }
   }
 
+  Future<void> _showRatingInputDialog() async {
+    final controller = TextEditingController(text: _rating.toStringAsFixed(1));
+    final result = await showDialog<double>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF161922),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Color(0xFF242836)),
+        ),
+        title: const Text(
+          'Exact Rating',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Enter any rating from 0.0 to 5.0 (e.g. 4.8):',
+              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: const Color(0xFF0D0F14),
+                hintText: 'e.g. 4.8',
+                hintStyle: const TextStyle(color: Color(0xFF4A5568)),
+                suffixText: '/ 5.0',
+                suffixStyle: const TextStyle(
+                  color: Color(0xFFF7BA34),
+                  fontWeight: FontWeight.bold,
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Color(0xFF242836)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Color(0xFFF7BA34)),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Color(0xFF94A3B8)),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFF7BA34),
+              foregroundColor: const Color(0xFF14161B),
+            ),
+            onPressed: () {
+              final val = double.tryParse(controller.text.trim());
+              if (val != null && val >= 0.0 && val <= 5.0) {
+                Navigator.of(ctx).pop(double.parse(val.toStringAsFixed(1)));
+              }
+            },
+            child:
+                const Text('OK', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+    if (result != null && mounted) {
+      setState(() {
+        _rating = result;
+      });
+    }
+  }
+
   Widget _buildFieldLabel(String label, {bool isRequired = false, String? optionalText}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
@@ -683,9 +778,10 @@ class _MovieFormScreenState extends State<MovieFormScreen> {
                                 Row(
                                   children: List.generate(5, (index) {
                                     final starValue = index + 1.0;
-                                    final isFull = _rating >= starValue;
-                                    final isHalf =
-                                        !isFull && _rating >= starValue - 0.5;
+                                    final isFull =
+                                        _rating >= starValue - 0.2;
+                                    final isHalf = !isFull &&
+                                        _rating >= starValue - 0.7;
                                     return GestureDetector(
                                       onTap: () {
                                         setState(() {
@@ -714,61 +810,127 @@ class _MovieFormScreenState extends State<MovieFormScreen> {
                                     );
                                   }),
                                 ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF262B37),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(
-                                        Icons.star_rounded,
-                                        color: Color(0xFFF7BA34),
-                                        size: 16,
+                                InkWell(
+                                  onTap: _showRatingInputDialog,
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 5,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF262B37),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: const Color(0xFF333B4D),
                                       ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        '${_rating.toStringAsFixed(1)} / 5.0',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.bold,
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(
+                                          Icons.star_rounded,
+                                          color: Color(0xFFF7BA34),
+                                          size: 16,
                                         ),
-                                      ),
-                                    ],
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '${_rating.toStringAsFixed(1)} / 5.0',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 5),
+                                        const Icon(
+                                          Icons.edit_outlined,
+                                          color: Color(0xFF94A3B8),
+                                          size: 12,
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 6),
-                            SliderTheme(
-                              data: SliderTheme.of(context).copyWith(
-                                activeTrackColor: const Color(0xFFF7BA34),
-                                inactiveTrackColor: const Color(0xFF262B37),
-                                thumbColor: const Color(0xFFF7BA34),
-                                overlayColor: const Color(0xFFF7BA34)
-                                    .withValues(alpha: 0.2),
-                                trackHeight: 3.0,
-                                thumbShape: const RoundSliderThumbShape(
-                                  enabledThumbRadius: 6,
+                            Row(
+                              children: [
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.remove_circle_outline,
+                                    color: Color(0xFF7E8B9C),
+                                    size: 19,
+                                  ),
+                                  visualDensity: VisualDensity.compact,
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                  tooltip: '-0.1',
+                                  onPressed: _rating > 0.0
+                                      ? () {
+                                          setState(() {
+                                            _rating = double.parse(
+                                              ((_rating - 0.1).clamp(0.0, 5.0))
+                                                  .toStringAsFixed(1),
+                                            );
+                                          });
+                                        }
+                                      : null,
                                 ),
-                              ),
-                              child: Slider(
-                                value: _rating.clamp(0.0, 5.0),
-                                min: 0.0,
-                                max: 5.0,
-                                divisions: 10,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _rating = value;
-                                  });
-                                },
-                              ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: SliderTheme(
+                                    data: SliderTheme.of(context).copyWith(
+                                      activeTrackColor: const Color(0xFFF7BA34),
+                                      inactiveTrackColor:
+                                          const Color(0xFF262B37),
+                                      thumbColor: const Color(0xFFF7BA34),
+                                      overlayColor: const Color(0xFFF7BA34)
+                                          .withValues(alpha: 0.2),
+                                      trackHeight: 3.0,
+                                      thumbShape: const RoundSliderThumbShape(
+                                        enabledThumbRadius: 6,
+                                      ),
+                                    ),
+                                    child: Slider(
+                                      value: _rating.clamp(0.0, 5.0),
+                                      min: 0.0,
+                                      max: 5.0,
+                                      divisions: 50,
+                                      onChanged: (value) {
+                                        setState(() {
+                                          _rating = double.parse(
+                                            value.toStringAsFixed(1),
+                                          );
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.add_circle_outline,
+                                    color: Color(0xFF7E8B9C),
+                                    size: 19,
+                                  ),
+                                  visualDensity: VisualDensity.compact,
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                  tooltip: '+0.1',
+                                  onPressed: _rating < 5.0
+                                      ? () {
+                                          setState(() {
+                                            _rating = double.parse(
+                                              ((_rating + 0.1).clamp(0.0, 5.0))
+                                                  .toStringAsFixed(1),
+                                            );
+                                          });
+                                        }
+                                      : null,
+                                ),
+                              ],
                             ),
                           ],
                         ),
