@@ -33,6 +33,15 @@ class GeminiAiClient implements AiClient {
       '$normalizedBase/v1beta/models/$model:generateContent?key=$apiKey',
     );
 
+    final generationConfig = <String, dynamic>{
+      'temperature': 0.7,
+      'responseMimeType': 'application/json',
+    };
+    // For Gemini 2.5 Flash, disable thinking budget to ensure fast response (< 4s) without timeout
+    if (model.contains('2.5')) {
+      generationConfig['thinkingConfig'] = {'thinkingBudget': 0};
+    }
+
     final requestBody = jsonEncode({
       'contents': [
         {
@@ -41,10 +50,7 @@ class GeminiAiClient implements AiClient {
           ]
         }
       ],
-      'generationConfig': {
-        'temperature': 0.7,
-        'responseMimeType': 'application/json',
-      },
+      'generationConfig': generationConfig,
     });
 
     final response = await _client
@@ -53,7 +59,7 @@ class GeminiAiClient implements AiClient {
           headers: {'Content-Type': 'application/json'},
           body: requestBody,
         )
-        .timeout(const Duration(seconds: 15));
+        .timeout(const Duration(seconds: 40));
 
     if (response.statusCode != 200) {
       if (response.body.contains('reported as leaked')) {

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 
 import 'package:movie/database/database_helper.dart';
 import 'package:movie/models/movie.dart';
@@ -71,11 +72,19 @@ class RecommendationService {
     return GeminiAiClient(apiKey: _apiKey, baseUrl: _baseUrl, model: _model);
   }
 
+  /// Clear in-memory recommendation cache
+  void clearCache() {
+    _cachedResult = null;
+  }
+
   /// Main entry point: UI only calls this method
   Future<RecommendationResult> getRecommendations({
     bool forceRefresh = false,
   }) async {
-    if (!forceRefresh && _cachedResult != null) {
+    // Only return cache if it was an actual AI success
+    if (!forceRefresh &&
+        _cachedResult != null &&
+        _cachedResult!.status == RecommendationStatus.success) {
       return _cachedResult!;
     }
 
@@ -92,19 +101,21 @@ class RecommendationService {
 
     // Step 3: Check if AI API is available
     if (!hasApiKey) {
-      final fallback = _buildFallback(
+      return _buildFallback(
         watchedMovies,
         'Chưa cấu hình API Key cho AI. Đang hiển thị gợi ý xem lại từ phim bạn yêu thích.',
       );
-      _cachedResult = fallback;
-      return fallback;
     }
 
     // Step 4: Construct dynamic prompt & call AI
     try {
       final prompt = buildPrompt(watchedMovies);
       final client = _getClient();
+      debugPrint('RecommendationService: Calling AI model ($_model)...');
       final rawResponse = await client.generateContent(prompt);
+      debugPrint(
+        'RecommendationService: Received response (${rawResponse.length} chars)',
+      );
 
       // Step 5: Validate and parse AI response
       final validated = parseAndValidateResponse(
@@ -118,17 +129,20 @@ class RecommendationService {
         );
       }
 
+      debugPrint(
+        'RecommendationService: Successfully validated ${validated.length} recommendations.',
+      );
       final result = RecommendationResult.success(validated);
       _cachedResult = result;
       return result;
-    } catch (e) {
-      // Step 6: Fallback Logic on any failure
-      final fallback = _buildFallback(
+    } catch (e, st) {
+      debugPrint('RecommendationService: AI call failed: $e');
+      debugPrint('RecommendationService stack: $st');
+      // Step 6: Fallback Logic on any failure (DO NOT cache fallback so retry works)
+      return _buildFallback(
         watchedMovies,
         'Không thể kết nối AI (${e.toString()}). Đang hiển thị gợi ý xem lại từ nhật ký của bạn.',
       );
-      _cachedResult = fallback;
-      return fallback;
     }
   }
 
@@ -215,53 +229,64 @@ $historyBuffer
       decoded = jsonDecode(repaired);
     }
 
-    if (decoded is! Map<String, dynamic>) {
-      throw const FormatException('Expected JSON root to be a Map.');
-    }
+    // Extract the recommendation list from Map or direct List
+    List? list;
+    if (decoded is List) {
+      list = decoded;
+    } else if (decoded is Map<String, dynamic>) {
+      // Handle full Gemini API response envelopes (candidates -> content -> parts -> text)
+      if (decoded.containsKey('candidates')) {
+        final candidates = decoded['candidates'] as List?;
+        if (candidates != null && candidates.isNotEmpty) {
+          final content = candidates[0]['content'] as Map<String, dynamic>?;
+          final parts = content?['parts'] as List?;
+          if (parts != null && parts.isNotEmpty) {
+            final textParts = parts
+                .whereType<Map>()
+                .where((p) => p['thought'] != true)
+                .map((p) => (p['text'] ?? '').toString())
+                .where((t) => t.trim().isNotEmpty)
+                .toList();
+            final innerText = textParts.join('');
+            if (innerText.trim().isNotEmpty) {
+              return parseAndValidateResponse(
+                innerText,
+                watchedMovies: watchedMovies,
+              );
+            }
+          }
+        }
+      }
 
-    // Handle full Gemini API response envelopes (candidates -> content -> parts -> text)
-    if (decoded.containsKey('candidates')) {
-      final candidates = decoded['candidates'] as List?;
-      if (candidates != null && candidates.isNotEmpty) {
-        final content = candidates[0]['content'] as Map<String, dynamic>?;
-        final parts = content?['parts'] as List?;
-        if (parts != null && parts.isNotEmpty) {
-          final textParts = parts
-              .whereType<Map>()
-              .where((p) => p['thought'] != true)
-              .map((p) => (p['text'] ?? '').toString())
-              .where((t) => t.trim().isNotEmpty)
-              .toList();
-          final innerText = textParts.join('');
-          if (innerText.trim().isNotEmpty) {
+      // Handle OpenAI API response envelopes (choices -> message -> content)
+      if (decoded.containsKey('choices')) {
+        final choices = decoded['choices'] as List?;
+        if (choices != null && choices.isNotEmpty) {
+          final message = choices[0]['message'] as Map<String, dynamic>?;
+          final content = message?['content'] as String?;
+          if (content != null && content.trim().isNotEmpty) {
             return parseAndValidateResponse(
-              innerText,
+              content,
               watchedMovies: watchedMovies,
             );
           }
         }
       }
-    }
 
-    // Handle OpenAI API response envelopes (choices -> message -> content)
-    if (decoded.containsKey('choices')) {
-      final choices = decoded['choices'] as List?;
-      if (choices != null && choices.isNotEmpty) {
-        final message = choices[0]['message'] as Map<String, dynamic>?;
-        final content = message?['content'] as String?;
-        if (content != null && content.trim().isNotEmpty) {
-          return parseAndValidateResponse(
-            content,
-            watchedMovies: watchedMovies,
-          );
-        }
+      if (decoded['recommendations'] is List) {
+        list = decoded['recommendations'] as List;
+      } else if (decoded['movies'] is List) {
+        list = decoded['movies'] as List;
+      } else if (decoded['data'] is List) {
+        list = decoded['data'] as List;
+      } else if (decoded.containsKey('title')) {
+        list = [decoded];
       }
     }
 
-    final list = decoded['recommendations'];
-    if (list is! List) {
+    if (list == null) {
       throw const FormatException(
-        'Key "recommendations" missing or not a List.',
+        'Key "recommendations" missing or response is not a valid list.',
       );
     }
 
@@ -402,8 +427,22 @@ $historyBuffer
     if (match != null) {
       text = match.group(1)!.trim();
     } else {
-      final start = text.indexOf('{');
-      final end = text.lastIndexOf('}');
+      // Find outermost '{' ... '}' or '[' ... ']'
+      final startBrace = text.indexOf('{');
+      final startBracket = text.indexOf('[');
+
+      int start = -1;
+      int end = -1;
+
+      if (startBrace != -1 &&
+          (startBracket == -1 || startBrace < startBracket)) {
+        start = startBrace;
+        end = text.lastIndexOf('}');
+      } else if (startBracket != -1) {
+        start = startBracket;
+        end = text.lastIndexOf(']');
+      }
+
       if (start != -1 && end != -1 && end > start) {
         text = text.substring(start, end + 1);
       }

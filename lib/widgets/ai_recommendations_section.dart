@@ -635,17 +635,34 @@ class _AiRecommendationsSectionState extends State<AiRecommendationsSection> {
                   color: const Color(0xFFF7BA34).withValues(alpha: 0.3),
                 ),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.bolt, color: Color(0xFFF7BA34), size: 16),
-                  SizedBox(width: 6),
+                  const Icon(Icons.bolt, color: Color(0xFFF7BA34), size: 16),
+                  const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      'AI đang bận. Đang hiển thị gợi ý xem lại từ phim bạn chấm điểm cao!',
-                      style: TextStyle(
+                      result.message ??
+                          'AI đang bận. Đang hiển thị gợi ý xem lại từ phim bạn chấm điểm cao!',
+                      style: const TextStyle(
                         color: Color(0xFFF7BA34),
                         fontSize: 11.5,
                         fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  InkWell(
+                    onTap: () => _fetchRecommendations(forceRefresh: true),
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      child: Text(
+                        'Thử lại',
+                        style: TextStyle(
+                          color: Color(0xFFF7BA34),
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          decoration: TextDecoration.underline,
+                        ),
                       ),
                     ),
                   ),
