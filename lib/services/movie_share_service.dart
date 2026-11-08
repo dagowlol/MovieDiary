@@ -118,7 +118,7 @@ class MovieShareService {
     final token = parseShareToken(inputUrlOrToken);
     if (token == null) {
       throw const InvalidShareLinkException(
-        'Link chia sẻ không hợp lệ. Vui lòng kiểm tra lại định dạng (ví dụ: https://yourapp.com/share/movie/{token}).',
+        'Link chia sẻ không hợp lệ. Vui lòng kiểm tra lại định dạng (ví dụ: http://localhost:5000/share/movie/{token}).',
       );
     }
 

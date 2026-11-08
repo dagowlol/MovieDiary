@@ -99,7 +99,9 @@ void main() {
       final service = MovieShareService.instance;
 
       expect(
-        () => service.previewSharedMovie('https://yourapp.com/share/movie/mov_non_existent_token_9999'),
+        () => service.previewSharedMovie(
+          'http://localhost:5000/share/movie/mov_non_existent_token_9999',
+        ),
         throwsA(isA<ShareLinkNotFoundException>()),
       );
     });

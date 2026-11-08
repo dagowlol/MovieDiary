@@ -89,11 +89,11 @@ CREATE TABLE IF NOT EXISTS shared_movies (
 
 ## 4. Định dạng Link & API Endpoints
 
-Link chia sẻ có định dạng:
+Link chia sẻ có định dạng mặc định theo **localhost:5000**:
 ```text
-https://yourapp.com/share/movie/{shareToken}
+http://localhost:5000/share/movie/{shareToken}
 ```
-*Ví dụ:* `https://yourapp.com/share/movie/mov_a8F91bKxZ29mPL4_`
+*Ví dụ:* `http://localhost:5000/share/movie/mov_a8F91bKxZ29mPL4_`
 
 Bộ phân giải linh hoạt ([`MovieShareService.parseShareToken`](lib/services/movie_share_service.dart)):
 1. Hỗ trợ nhận diện đầy đủ URL có schema (`http://` hoặc `https://`).

@@ -27,8 +27,11 @@ class Constants {
   static const String colRevokedAt = 'revoked_at';
   static const String colIsRevoked = 'is_revoked';
 
-  // Movie Sharing Config
-  static const String shareBaseUrl = 'https://yourapp.com/share/movie';
+  // Movie Sharing Config (Default to localhost:5000)
+  static const String shareBaseUrl = String.fromEnvironment(
+    'SHARE_BASE_URL',
+    defaultValue: 'http://localhost:5000/share/movie',
+  );
 
   // Predefined Movie Genres
   static const List<String> movieGenres = [
