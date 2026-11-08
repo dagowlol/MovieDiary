@@ -4,6 +4,7 @@ import 'package:movie/features/movie_detail/movie_detail_screen.dart';
 import 'package:movie/features/movie_form/movie_form_screen.dart';
 import 'package:movie/models/movie.dart';
 import 'package:movie/utils/constants.dart';
+import 'package:movie/widgets/ai_recommendations_section.dart';
 import 'package:movie/widgets/movie_card.dart';
 
 class LibraryScreen extends StatefulWidget {
@@ -255,12 +256,16 @@ class _LibraryScreenState extends State<LibraryScreen> {
         onRefresh: _loadMovies,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          children: const [
-            SizedBox(height: 120),
-            Icon(Icons.movie_filter_outlined,
+          padding: const EdgeInsets.only(bottom: 88),
+          children: [
+            AiRecommendationsSection(
+              onMovieAddedToWatchlist: _loadMovies,
+            ),
+            const SizedBox(height: 40),
+            const Icon(Icons.movie_filter_outlined,
                 color: Color(0xFF6B7688), size: 48),
-            SizedBox(height: 12),
-            Text(
+            const SizedBox(height: 12),
+            const Text(
               'No movies logged yet',
               textAlign: TextAlign.center,
               style: TextStyle(
@@ -269,8 +274,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 fontWeight: FontWeight.w700,
               ),
             ),
-            SizedBox(height: 8),
-            Text(
+            const SizedBox(height: 8),
+            const Text(
               'Tap + to add your first diary entry.',
               textAlign: TextAlign.center,
               style: TextStyle(color: Color(0xFF7E8B9C)),
@@ -304,18 +309,31 @@ class _LibraryScreenState extends State<LibraryScreen> {
       );
     }
 
+    final showAiSection = _query.isEmpty && _selectedGenre == 'All';
+
     return RefreshIndicator(
       color: const Color(0xFFF7BA34),
       onRefresh: _loadMovies,
-      child: ListView.separated(
+      child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 88),
-        itemCount: movies.length,
-        separatorBuilder: (context, index) => const SizedBox(height: 12),
+        itemCount: movies.length + (showAiSection ? 1 : 0),
         itemBuilder: (context, index) {
-          final movie = movies[index];
-          return MovieCard(
-            movie: movie,
-            onTap: () => _openDetail(movie),
+          if (showAiSection && index == 0) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: AiRecommendationsSection(
+                onMovieAddedToWatchlist: _loadMovies,
+              ),
+            );
+          }
+          final movieIndex = showAiSection ? index - 1 : index;
+          final movie = movies[movieIndex];
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: MovieCard(
+              movie: movie,
+              onTap: () => _openDetail(movie),
+            ),
           );
         },
       ),
