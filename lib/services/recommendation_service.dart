@@ -11,12 +11,25 @@ class RecommendationService {
   RecommendationService._init();
 
   // Configurable credentials (read from environment by default, can be modified at runtime)
-  String _apiKey = const String.fromEnvironment('AI_API_KEY', defaultValue: '');
+  String _apiKey = const String.fromEnvironment(
+    'GEMINI_API_KEY',
+    defaultValue: String.fromEnvironment(
+      'AI_API_KEY',
+      defaultValue: '',
+    ),
+  );
   String _provider =
       const String.fromEnvironment('AI_PROVIDER', defaultValue: 'gemini');
   String _baseUrl = const String.fromEnvironment(
-    'AI_BASE_URL',
-    defaultValue: 'https://api.openai.com/v1',
+    'GEMINI_API_URL',
+    defaultValue: String.fromEnvironment(
+      'AI_BASE_URL',
+      defaultValue: 'https://generativelanguage.googleapis.com',
+    ),
+  );
+  String _model = const String.fromEnvironment(
+    'GEMINI_MODEL',
+    defaultValue: 'gemini-2.5-flash',
   );
 
   AiClient? _customClient;
@@ -25,6 +38,7 @@ class RecommendationService {
   String get apiKey => _apiKey;
   String get provider => _provider;
   String get baseUrl => _baseUrl;
+  String get model => _model;
   bool get hasApiKey => _apiKey.trim().isNotEmpty || _customClient != null;
 
   /// Configure AI settings at runtime (e.g. from UI settings or testing)
@@ -32,11 +46,13 @@ class RecommendationService {
     String? apiKey,
     String? provider,
     String? baseUrl,
+    String? model,
     AiClient? client,
   }) {
     if (apiKey != null) _apiKey = apiKey.trim();
     if (provider != null) _provider = provider.trim().toLowerCase();
     if (baseUrl != null) _baseUrl = baseUrl.trim();
+    if (model != null) _model = model.trim();
     if (client != null) _customClient = client;
     _cachedResult = null; // Invalidate cache on re-configuration
   }
@@ -46,10 +62,10 @@ class RecommendationService {
     if (_customClient != null) return _customClient!;
 
     if (_provider == 'openai') {
-      return OpenAiClient(apiKey: _apiKey, baseUrl: _baseUrl);
+      return OpenAiClient(apiKey: _apiKey, baseUrl: _baseUrl, model: _model);
     }
     // Default to Gemini
-    return GeminiAiClient(apiKey: _apiKey);
+    return GeminiAiClient(apiKey: _apiKey, baseUrl: _baseUrl, model: _model);
   }
 
   /// Main entry point: UI only calls this method

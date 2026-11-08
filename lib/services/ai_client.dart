@@ -9,12 +9,14 @@ abstract class AiClient {
 /// Google Gemini API Client (default, free-tier friendly)
 class GeminiAiClient implements AiClient {
   final String apiKey;
+  final String baseUrl;
   final String model;
   final http.Client _client;
 
   GeminiAiClient({
     required this.apiKey,
-    this.model = 'gemini-1.5-flash',
+    this.baseUrl = 'https://generativelanguage.googleapis.com',
+    this.model = 'gemini-2.5-flash',
     http.Client? client,
   }) : _client = client ?? http.Client();
 
@@ -24,8 +26,11 @@ class GeminiAiClient implements AiClient {
       throw StateError('Gemini API key is not configured.');
     }
 
+    final normalizedBase = baseUrl.endsWith('/')
+        ? baseUrl.substring(0, baseUrl.length - 1)
+        : baseUrl;
     final url = Uri.parse(
-      'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$apiKey',
+      '$normalizedBase/v1beta/models/$model:generateContent?key=$apiKey',
     );
 
     final requestBody = jsonEncode({
@@ -51,6 +56,12 @@ class GeminiAiClient implements AiClient {
         .timeout(const Duration(seconds: 15));
 
     if (response.statusCode != 200) {
+      if (response.body.contains('reported as leaked')) {
+        throw const HttpException(
+          'API Key bị Google vô hiệu hóa do đã bị lộ công khai (Leaked Key). '
+          'Vui lòng tạo một API Key mới tại: https://aistudio.google.com/app/apikey',
+        );
+      }
       throw HttpException(
         'Gemini API error (${response.statusCode}): ${response.body}',
       );
