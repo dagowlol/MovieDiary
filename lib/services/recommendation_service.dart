@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:movie/database/database_helper.dart';
 import 'package:movie/models/movie.dart';
 import 'package:movie/models/movie_recommendation.dart';
@@ -18,8 +19,10 @@ class RecommendationService {
       defaultValue: '',
     ),
   );
-  String _provider =
-      const String.fromEnvironment('AI_PROVIDER', defaultValue: 'gemini');
+  String _provider = const String.fromEnvironment(
+    'AI_PROVIDER',
+    defaultValue: 'gemini',
+  );
   String _baseUrl = const String.fromEnvironment(
     'GEMINI_API_URL',
     defaultValue: String.fromEnvironment(
@@ -110,7 +113,9 @@ class RecommendationService {
       );
 
       if (validated.isEmpty) {
-        throw const FormatException('AI returned no valid new recommendations.');
+        throw const FormatException(
+          'AI returned no valid new recommendations.',
+        );
       }
 
       final result = RecommendationResult.success(validated);
@@ -139,13 +144,14 @@ class RecommendationService {
 
     final topGenres = genreScores.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
-    final preferredGenreList =
-        topGenres.take(4).map((e) => e.key).join(', ');
+    final preferredGenreList = topGenres.take(4).map((e) => e.key).join(', ');
 
     // Format watched history
     final historyBuffer = StringBuffer();
     for (final m in watchedMovies) {
-      historyBuffer.write('- ${m.title} (${m.releaseYear}) · Genre: ${m.genre}');
+      historyBuffer.write(
+        '- ${m.title} (${m.releaseYear}) · Genre: ${m.genre}',
+      );
       if (m.rating > 0) {
         historyBuffer.write(' · Rating: ${m.rating.toStringAsFixed(1)}/5.0');
       }
@@ -156,8 +162,7 @@ class RecommendationService {
     }
 
     // List of watched titles for strict negative constraint
-    final watchedTitles =
-        watchedMovies.map((m) => '"${m.title}"').join(', ');
+    final watchedTitles = watchedMovies.map((m) => '"${m.title}"').join(', ');
 
     return '''
 You are an expert movie recommendation assistant.
@@ -177,7 +182,8 @@ $historyBuffer
 3. For each recommended movie, explain specifically in Vietnamese why the user would enjoy it (field "reason").
 4. Provide a "matchScore" integer between 75 and 98 based on user history.
 5. If you know a valid public poster URL (e.g. from TMDB or Wikimedia), provide it in "posterUrl"; otherwise use null.
-6. Return ONLY valid JSON matching this exact structure:
+6. Ensure the JSON is 100% syntactically valid with proper closing braces '}' for every object in the list.
+7. Return ONLY valid JSON matching this exact structure:
 {
   "recommendations": [
     {
@@ -199,15 +205,64 @@ $historyBuffer
     required List<Movie> watchedMovies,
   }) {
     final cleanedJson = _extractJson(raw);
-    final decoded = jsonDecode(cleanedJson);
+    dynamic decoded;
+
+    try {
+      decoded = jsonDecode(cleanedJson);
+    } catch (_) {
+      // Auto-repair common LLM JSON syntax issues (missing braces, trailing commas, truncated output)
+      final repaired = _repairJson(cleanedJson);
+      decoded = jsonDecode(repaired);
+    }
 
     if (decoded is! Map<String, dynamic>) {
       throw const FormatException('Expected JSON root to be a Map.');
     }
 
+    // Handle full Gemini API response envelopes (candidates -> content -> parts -> text)
+    if (decoded.containsKey('candidates')) {
+      final candidates = decoded['candidates'] as List?;
+      if (candidates != null && candidates.isNotEmpty) {
+        final content = candidates[0]['content'] as Map<String, dynamic>?;
+        final parts = content?['parts'] as List?;
+        if (parts != null && parts.isNotEmpty) {
+          final textParts = parts
+              .whereType<Map>()
+              .where((p) => p['thought'] != true)
+              .map((p) => (p['text'] ?? '').toString())
+              .where((t) => t.trim().isNotEmpty)
+              .toList();
+          final innerText = textParts.join('');
+          if (innerText.trim().isNotEmpty) {
+            return parseAndValidateResponse(
+              innerText,
+              watchedMovies: watchedMovies,
+            );
+          }
+        }
+      }
+    }
+
+    // Handle OpenAI API response envelopes (choices -> message -> content)
+    if (decoded.containsKey('choices')) {
+      final choices = decoded['choices'] as List?;
+      if (choices != null && choices.isNotEmpty) {
+        final message = choices[0]['message'] as Map<String, dynamic>?;
+        final content = message?['content'] as String?;
+        if (content != null && content.trim().isNotEmpty) {
+          return parseAndValidateResponse(
+            content,
+            watchedMovies: watchedMovies,
+          );
+        }
+      }
+    }
+
     final list = decoded['recommendations'];
     if (list is! List) {
-      throw const FormatException('Key "recommendations" missing or not a List.');
+      throw const FormatException(
+        'Key "recommendations" missing or not a List.',
+      );
     }
 
     final watchedNormalized = watchedMovies
@@ -240,6 +295,63 @@ $historyBuffer
     }
 
     return results;
+  }
+
+  /// Self-healing JSON fixer for common LLM syntax flaws
+  String _repairJson(String raw) {
+    var fixed = raw.trim();
+
+    // 1. Missing closing brace '}' before comma and next object in array:
+    // e.g. "posterUrl": "https://..."\n    ,\n    {
+    fixed = fixed.replaceAllMapped(
+      RegExp(r'([^}\]\s])\s*,\s*\{'),
+      (match) => '${match.group(1)}},\n    {',
+    );
+
+    // 2. Trailing comma before ']' or '}': e.g. ", ]" or ", }"
+    fixed = fixed.replaceAll(RegExp(r',\s*([\]}])'), r'$1');
+
+    // 3. Balance unclosed quotes, brackets, or braces (e.g. truncated response)
+    int openBraces = 0;
+    int openBrackets = 0;
+    bool inString = false;
+    bool isEscaped = false;
+
+    for (int i = 0; i < fixed.length; i++) {
+      final char = fixed[i];
+      if (isEscaped) {
+        isEscaped = false;
+        continue;
+      }
+      if (char == r'\') {
+        isEscaped = true;
+        continue;
+      }
+      if (char == '"') {
+        inString = !inString;
+        continue;
+      }
+      if (!inString) {
+        if (char == '{') openBraces++;
+        if (char == '}') openBraces--;
+        if (char == '[') openBrackets++;
+        if (char == ']') openBrackets--;
+      }
+    }
+
+    if (inString) {
+      fixed += '"';
+    }
+    while (openBrackets > 0) {
+      fixed += ']';
+      openBrackets--;
+    }
+    while (openBraces > 0) {
+      fixed += '}';
+      openBraces--;
+    }
+
+    return fixed;
   }
 
   /// Fallback logic: utilizes only user's own diary entries (NO hardcoded movie catalog)

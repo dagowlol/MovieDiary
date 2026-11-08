@@ -79,8 +79,22 @@ class GeminiAiClient implements AiClient {
       throw const FormatException('Gemini returned content with no parts.');
     }
 
-    final text = parts[0]['text'] as String?;
-    if (text == null || text.trim().isEmpty) {
+    // In Gemini 2.5: multiple parts or thinking parts might exist
+    final textParts = parts
+        .whereType<Map>()
+        .where((p) => p['thought'] != true)
+        .map((p) => (p['text'] ?? '').toString())
+        .where((t) => t.trim().isNotEmpty)
+        .toList();
+
+    final text = textParts.isNotEmpty
+        ? textParts.join('')
+        : parts
+            .whereType<Map>()
+            .map((p) => (p['text'] ?? '').toString())
+            .lastWhere((t) => t.trim().isNotEmpty, orElse: () => '');
+
+    if (text.trim().isEmpty) {
       throw const FormatException('Gemini returned empty text.');
     }
 
