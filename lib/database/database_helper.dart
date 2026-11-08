@@ -38,12 +38,14 @@ class DatabaseHelper {
       path = join(dbPath, filePath);
     }
 
-    return await openDatabase(
+    final db = await openDatabase(
       path,
       version: Constants.dbVersion,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
+    await _seedIfEmpty(db);
+    return db;
   }
 
   Future<void> _createDB(Database db, int version) async {
@@ -61,6 +63,7 @@ class DatabaseHelper {
         ${Constants.colPosterUrl} TEXT
       )
     ''');
+    await seedInitialData(db);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -69,6 +72,132 @@ class DatabaseHelper {
         'ALTER TABLE ${Constants.tableMovies} ADD COLUMN ${Constants.colPosterUrl} TEXT',
       );
     }
+  }
+
+  /// Initial mock movies used to seed the database on first run
+  static final List<Movie> initialMovies = [
+    Movie(
+      title: 'Inception',
+      director: 'Christopher Nolan',
+      releaseYear: 2010,
+      genre: 'Sci-Fi',
+      rating: 4.8,
+      isWatched: true,
+      review:
+          'A mind-bending masterpiece with brilliant storytelling and stunning visuals.',
+      watchedDate: '2024-01-15',
+      posterUrl:
+          'https://image.tmdb.org/t/p/w500/ljsZTbVsrQSqZgWeep2B1QiDKuh.jpg',
+    ),
+    Movie(
+      title: 'The Dark Knight',
+      director: 'Christopher Nolan',
+      releaseYear: 2008,
+      genre: 'Action',
+      rating: 4.9,
+      isWatched: true,
+      review:
+          "Heath Ledger's iconic performance as the Joker makes this the definitive comic book movie.",
+      watchedDate: '2024-02-10',
+      posterUrl:
+          'https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg',
+    ),
+    Movie(
+      title: 'Spirited Away',
+      director: 'Hayao Miyazaki',
+      releaseYear: 2001,
+      genre: 'Animation',
+      rating: 5.0,
+      isWatched: true,
+      review:
+          'An enchanting and timeless Ghibli masterpiece full of imagination and heart.',
+      watchedDate: '2024-03-05',
+      posterUrl:
+          'https://image.tmdb.org/t/p/w500/39wmItIWsg5sZMyRUHLkWBcuVCM.jpg',
+    ),
+    Movie(
+      title: 'Interstellar',
+      director: 'Christopher Nolan',
+      releaseYear: 2014,
+      genre: 'Sci-Fi',
+      rating: 4.7,
+      isWatched: true,
+      review:
+          'An emotionally resonant journey across space and time with an unforgettable score.',
+      watchedDate: '2024-03-22',
+      posterUrl:
+          'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg',
+    ),
+    Movie(
+      title: 'Parasite',
+      director: 'Bong Joon-ho',
+      releaseYear: 2019,
+      genre: 'Thriller',
+      rating: 4.6,
+      isWatched: true,
+      review:
+          'Pitch-perfect social satire with unforgettable twists and razor-sharp direction.',
+      watchedDate: '2024-04-18',
+      posterUrl:
+          'https://image.tmdb.org/t/p/w500/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg',
+    ),
+    Movie(
+      title: 'Dune: Part Two',
+      director: 'Denis Villeneuve',
+      releaseYear: 2024,
+      genre: 'Sci-Fi',
+      rating: 0.0,
+      isWatched: false,
+      review: null,
+      watchedDate: '',
+      posterUrl:
+          'https://image.tmdb.org/t/p/w500/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg',
+    ),
+    Movie(
+      title: 'The Grand Budapest Hotel',
+      director: 'Wes Anderson',
+      releaseYear: 2014,
+      genre: 'Comedy',
+      rating: 0.0,
+      isWatched: false,
+      review: null,
+      watchedDate: '',
+      posterUrl:
+          'https://image.tmdb.org/t/p/w500/eWdyYQreja6JGCzqHWX9NZkt5BW.jpg',
+    ),
+    Movie(
+      title: 'Oppenheimer',
+      director: 'Christopher Nolan',
+      releaseYear: 2023,
+      genre: 'Drama',
+      rating: 0.0,
+      isWatched: false,
+      review: null,
+      watchedDate: '',
+      posterUrl:
+          'https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg',
+    ),
+  ];
+
+  /// Seeds initial movie data if the movies table is currently empty
+  Future<void> _seedIfEmpty(Database db) async {
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM ${Constants.tableMovies}',
+    );
+    final count = (result.isNotEmpty ? result.first['count'] as num? : null)?.toInt() ?? 0;
+    if (count == 0) {
+      await seedInitialData(db);
+    }
+  }
+
+  /// Bulk inserts the initial seed movies into the database
+  Future<void> seedInitialData([Database? db]) async {
+    final targetDb = db ?? await database;
+    final batch = targetDb.batch();
+    for (final movie in initialMovies) {
+      batch.insert(Constants.tableMovies, movie.toMap());
+    }
+    await batch.commit(noResult: true);
   }
 
   // CREATE
