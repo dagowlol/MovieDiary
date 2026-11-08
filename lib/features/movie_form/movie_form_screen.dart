@@ -51,8 +51,8 @@ class _MovieFormScreenState extends State<MovieFormScreen> {
       _selectedGenre = Constants.movieGenres.first;
     }
 
-    _rating = movie?.rating ?? 0.0;
     _isWatched = movie?.isWatched ?? false;
+    _rating = movie?.rating ?? (_isWatched ? 5.0 : 0.0);
     _watchedDate = movie?.watchedDate ?? '';
 
     // Listeners to live update the preview card
@@ -114,7 +114,7 @@ class _MovieFormScreenState extends State<MovieFormScreen> {
         director: director,
         releaseYear: releaseYear,
         genre: _selectedGenre,
-        rating: _rating,
+        rating: _isWatched ? _rating : 0.0,
         isWatched: _isWatched,
         review: review,
         watchedDate: finalWatchedDate,
@@ -617,6 +617,9 @@ class _MovieFormScreenState extends State<MovieFormScreen> {
                               onTap: () {
                                 setState(() {
                                   _isWatched = true;
+                                  if (_rating == 0.0) {
+                                    _rating = 5.0;
+                                  }
                                   if (_watchedDate.isEmpty) {
                                     final now = DateTime.now();
                                     _watchedDate =
@@ -650,6 +653,127 @@ class _MovieFormScreenState extends State<MovieFormScreen> {
                         ],
                       ),
                     ),
+
+                    // Star Rating (Visible when movie is marked as Watched)
+                    if (_isWatched) ...[
+                      const SizedBox(height: 18),
+                      _buildFieldLabel(
+                        'Your rating',
+                        optionalText: '${_rating.toStringAsFixed(1)} / 5.0',
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0,
+                          vertical: 12.0,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF161922),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: const Color(0xFF232835),
+                            width: 1.0,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: List.generate(5, (index) {
+                                    final starValue = index + 1.0;
+                                    final isFull = _rating >= starValue;
+                                    final isHalf =
+                                        !isFull && _rating >= starValue - 0.5;
+                                    return GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          if (_rating == starValue) {
+                                            _rating = starValue - 0.5;
+                                          } else {
+                                            _rating = starValue;
+                                          }
+                                        });
+                                      },
+                                      child: Padding(
+                                        padding:
+                                            const EdgeInsets.only(right: 6.0),
+                                        child: Icon(
+                                          isFull
+                                              ? Icons.star_rounded
+                                              : (isHalf
+                                                  ? Icons.star_half_rounded
+                                                  : Icons.star_outline_rounded),
+                                          color: (isFull || isHalf)
+                                              ? const Color(0xFFF7BA34)
+                                              : const Color(0xFF4A5568),
+                                          size: 32,
+                                        ),
+                                      ),
+                                    );
+                                  }),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF262B37),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.star_rounded,
+                                        color: Color(0xFFF7BA34),
+                                        size: 16,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '${_rating.toStringAsFixed(1)} / 5.0',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            SliderTheme(
+                              data: SliderTheme.of(context).copyWith(
+                                activeTrackColor: const Color(0xFFF7BA34),
+                                inactiveTrackColor: const Color(0xFF262B37),
+                                thumbColor: const Color(0xFFF7BA34),
+                                overlayColor: const Color(0xFFF7BA34)
+                                    .withValues(alpha: 0.2),
+                                trackHeight: 3.0,
+                                thumbShape: const RoundSliderThumbShape(
+                                  enabledThumbRadius: 6,
+                                ),
+                              ),
+                              child: Slider(
+                                value: _rating.clamp(0.0, 5.0),
+                                min: 0.0,
+                                max: 5.0,
+                                divisions: 10,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _rating = value;
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 18),
 
                     // Personal Notes Field
