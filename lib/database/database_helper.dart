@@ -4,6 +4,7 @@ import 'package:path/path.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 import 'package:movie/models/movie.dart';
+import 'package:movie/models/shared_movie.dart';
 import 'package:movie/utils/constants.dart';
 
 class DatabaseHelper {
@@ -41,6 +42,9 @@ class DatabaseHelper {
     final db = await openDatabase(
       path,
       version: Constants.dbVersion,
+      onConfigure: (db) async {
+        await db.execute('PRAGMA busy_timeout = 5000');
+      },
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -63,6 +67,25 @@ class DatabaseHelper {
         ${Constants.colPosterUrl} TEXT
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE ${Constants.tableSharedMovies} (
+        ${Constants.colId} INTEGER PRIMARY KEY AUTOINCREMENT,
+        ${Constants.colShareToken} TEXT UNIQUE NOT NULL,
+        ${Constants.colOwnerId} TEXT NOT NULL,
+        ${Constants.colSenderName} TEXT NOT NULL,
+        ${Constants.colMovieTitle} TEXT NOT NULL,
+        ${Constants.colDirector} TEXT,
+        ${Constants.colReleaseYear} INTEGER NOT NULL,
+        ${Constants.colGenre} TEXT NOT NULL,
+        ${Constants.colRating} REAL NOT NULL DEFAULT 0.0,
+        ${Constants.colReview} TEXT,
+        ${Constants.colPosterUrl} TEXT,
+        ${Constants.colCreatedAt} TEXT NOT NULL,
+        ${Constants.colRevokedAt} TEXT,
+        ${Constants.colIsRevoked} INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
     await seedInitialData(db);
   }
 
@@ -71,6 +94,26 @@ class DatabaseHelper {
       await db.execute(
         'ALTER TABLE ${Constants.tableMovies} ADD COLUMN ${Constants.colPosterUrl} TEXT',
       );
+    }
+    if (oldVersion < 3) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS ${Constants.tableSharedMovies} (
+          ${Constants.colId} INTEGER PRIMARY KEY AUTOINCREMENT,
+          ${Constants.colShareToken} TEXT UNIQUE NOT NULL,
+          ${Constants.colOwnerId} TEXT NOT NULL,
+          ${Constants.colSenderName} TEXT NOT NULL,
+          ${Constants.colMovieTitle} TEXT NOT NULL,
+          ${Constants.colDirector} TEXT,
+          ${Constants.colReleaseYear} INTEGER NOT NULL,
+          ${Constants.colGenre} TEXT NOT NULL,
+          ${Constants.colRating} REAL NOT NULL DEFAULT 0.0,
+          ${Constants.colReview} TEXT,
+          ${Constants.colPosterUrl} TEXT,
+          ${Constants.colCreatedAt} TEXT NOT NULL,
+          ${Constants.colRevokedAt} TEXT,
+          ${Constants.colIsRevoked} INTEGER NOT NULL DEFAULT 0
+        )
+      ''');
     }
   }
 
@@ -298,6 +341,73 @@ class DatabaseHelper {
     final db = await database;
     return await db.delete(
       Constants.tableMovies,
+      where: '${Constants.colId} = ?',
+      whereArgs: [id],
+    );
+  }
+
+  // ================= SHARED MOVIES OPERATIONS =================
+
+  Future<int> insertSharedMovie(SharedMovie item) async {
+    final db = await database;
+    return await db.insert(
+      Constants.tableSharedMovies,
+      item.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<SharedMovie?> getSharedMovieByToken(String token) async {
+    final db = await database;
+    final results = await db.query(
+      Constants.tableSharedMovies,
+      where: '${Constants.colShareToken} = ?',
+      whereArgs: [token.trim()],
+    );
+    if (results.isNotEmpty) {
+      return SharedMovie.fromMap(results.first);
+    }
+    return null;
+  }
+
+  Future<List<SharedMovie>> getSharedMoviesByOwner(String ownerId) async {
+    final db = await database;
+    final results = await db.query(
+      Constants.tableSharedMovies,
+      where: '${Constants.colOwnerId} = ?',
+      whereArgs: [ownerId],
+      orderBy: '${Constants.colId} DESC',
+    );
+    return results.map((row) => SharedMovie.fromMap(row)).toList();
+  }
+
+  Future<List<SharedMovie>> getAllSharedMovies() async {
+    final db = await database;
+    final results = await db.query(
+      Constants.tableSharedMovies,
+      orderBy: '${Constants.colId} DESC',
+    );
+    return results.map((row) => SharedMovie.fromMap(row)).toList();
+  }
+
+  Future<int> revokeSharedMovie(String token, {required String ownerId}) async {
+    final db = await database;
+    final nowIso = DateTime.now().toIso8601String();
+    return await db.update(
+      Constants.tableSharedMovies,
+      {
+        Constants.colIsRevoked: 1,
+        Constants.colRevokedAt: nowIso,
+      },
+      where: '${Constants.colShareToken} = ? AND ${Constants.colOwnerId} = ?',
+      whereArgs: [token.trim(), ownerId],
+    );
+  }
+
+  Future<int> deleteSharedMovie(int id) async {
+    final db = await database;
+    return await db.delete(
+      Constants.tableSharedMovies,
       where: '${Constants.colId} = ?',
       whereArgs: [id],
     );
