@@ -1,0 +1,34 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Movie Diary (Chrome Port 5000)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "args": [
+        "-d",
+        "chrome",
+        "--web-port=5000"
+      ]
+    },
+    {
+      "name": "Movie Diary (Web Server Port 5000)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "args": [
+        "-d",
+        "web-server",
+        "--web-port=5000",
+        "--web-hostname=0.0.0.0"
+      ]
+    },
+    {
+      "name": "Movie Diary (Default)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart"
+    }
+  ]
+}

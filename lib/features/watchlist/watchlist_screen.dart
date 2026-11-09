@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:movie/database/database_helper.dart';
 import 'package:movie/features/movie_detail/movie_detail_screen.dart';
 import 'package:movie/features/movie_form/movie_form_screen.dart';
+import 'package:movie/features/movie_share/import_movie_modal.dart';
+import 'package:movie/features/movie_share/shared_movies_screen.dart';
 import 'package:movie/models/movie.dart';
 import 'package:movie/widgets/movie_card.dart';
 
@@ -129,27 +131,53 @@ class _WatchlistScreenState extends State<WatchlistScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(20, 20, 20, 8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 12, 8),
+                  child: Row(
                     children: [
-                      Text(
-                        'PLAN TO WATCH',
-                        style: TextStyle(
-                          color: Color(0xFFF7BA34),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.2,
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'PLAN TO WATCH',
+                              style: TextStyle(
+                                color: Color(0xFFF7BA34),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'Watchlist',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      SizedBox(height: 2),
-                      Text(
-                        'Watchlist',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
+                      IconButton(
+                        tooltip: 'Import phim từ link',
+                        icon: const Icon(Icons.link, color: Color(0xFFF7BA34)),
+                        onPressed: () => ImportMovieModal.show(
+                          context,
+                          onMovieAddedToWatchlist: _loadMovies,
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Phim đã chia sẻ',
+                        icon: const Icon(
+                          Icons.outbox_rounded,
+                          color: Color(0xFF94A3B8),
+                        ),
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const SharedMoviesScreen(),
+                          ),
                         ),
                       ),
                     ],

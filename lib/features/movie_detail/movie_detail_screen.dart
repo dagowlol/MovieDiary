@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:movie/database/database_helper.dart';
 import 'package:movie/features/movie_form/movie_form_screen.dart';
+import 'package:movie/features/movie_share/share_movie_modal.dart';
 import 'package:movie/models/movie.dart';
 
 class MovieDetailScreen extends StatefulWidget {
@@ -262,6 +263,17 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                               ),
                             ),
                           ],
+                        ),
+                      ),
+                      IconButton(
+                        key: const Key('share-movie'),
+                        tooltip: 'Share',
+                        onPressed: _isBusy
+                            ? null
+                            : () => ShareMovieModal.show(context, _movie),
+                        icon: const Icon(
+                          Icons.share_outlined,
+                          color: Color(0xFFF7BA34),
                         ),
                       ),
                       IconButton(

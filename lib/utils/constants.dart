@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 class Constants {
   // Database Constants
   static const String dbName = 'movie_diary.db';
-  static const int dbVersion = 2;
+  static const int dbVersion = 3;
   static const String tableMovies = 'movies';
+  static const String tableSharedMovies = 'shared_movies';
 
   static const String colId = 'id';
   static const String colTitle = 'title';
@@ -16,6 +17,21 @@ class Constants {
   static const String colReview = 'review';
   static const String colWatchedDate = 'watched_date';
   static const String colPosterUrl = 'poster_url';
+
+  // Shared Movies Columns
+  static const String colShareToken = 'share_token';
+  static const String colOwnerId = 'owner_id';
+  static const String colSenderName = 'sender_name';
+  static const String colMovieTitle = 'movie_title';
+  static const String colCreatedAt = 'created_at';
+  static const String colRevokedAt = 'revoked_at';
+  static const String colIsRevoked = 'is_revoked';
+
+  // Movie Sharing Config (Default to localhost:5000)
+  static const String shareBaseUrl = String.fromEnvironment(
+    'SHARE_BASE_URL',
+    defaultValue: 'http://localhost:5000/share/movie',
+  );
 
   // Predefined Movie Genres
   static const List<String> movieGenres = [
