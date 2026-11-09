@@ -13,7 +13,7 @@ class RecommendationService {
 
   RecommendationService._init();
 
-  // Configurable credentials (read from environment by default, can be modified at runtime)
+  // Configurable credentials (read from environment / .env by default, can be modified at runtime)
   String _apiKey = const String.fromEnvironment(
     'GEMINI_API_KEY',
     defaultValue: String.fromEnvironment(
