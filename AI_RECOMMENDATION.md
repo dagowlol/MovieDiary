@@ -199,12 +199,19 @@ flutter test
 ```
 *Kết quả:* Toàn bộ **16/16 tests** (bao gồm model, DB, screens và AI Recommendation Service) đều vượt qua.
 
-### Cách 2: Test Live với Google Gemini API Key
+### Cách 2: Test Live với Google Gemini API Key thông qua `.env`
 1. Lấy API Key miễn phí từ [Google AI Studio](https://aistudio.google.com/).
-2. Chạy ứng dụng kèm cờ `AI_API_KEY`:
-   ```bash
-   flutter run -d chrome --dart-define=AI_API_KEY="AIzaSyYourGeminiApiKeyHere"
+2. Tạo file `.env` trong thư mục `movie/` (hoặc sao chép từ `.env.example`):
+   ```env
+   GEMINI_API_KEY=your_actual_gemini_api_key
+   GEMINI_API_URL=https://generativelanguage.googleapis.com
+   GEMINI_MODEL=gemini-2.5-flash
    ```
+3. Chạy ứng dụng đọc trực tiếp cấu hình từ `.env`:
+   ```bash
+   flutter run -d chrome --web-port=5000 --dart-define-from-file=.env
+   ```
+   *(File `.env` đã được thêm vào `.gitignore` nên tuyệt đối bảo mật và không bao giờ bị đẩy lên GitHub).*
    *(Hoặc bấm vào biểu tượng bánh răng **Cấu hình AI** trên thanh tiêu đề của mục Gợi ý trong app rồi dán API Key trực tiếp).*
 3. Nhìn vào màn hình Library, AI sẽ phân tích 5 phim đã xem trong database (Inception, Interstellar, The Dark Knight,...) và trả về danh sách các phim phù hợp kèm lý do tiếng Việt.
 4. Bấm nút **`+ Watchlist`** trên card để lưu ngay bộ phim gợi ý vào danh sách chờ xem!
