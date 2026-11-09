@@ -1,11 +1,14 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:movie/database/database_helper.dart';
 import 'package:movie/features/library/library_screen.dart';
 import 'package:movie/features/movie_detail/movie_detail_screen.dart';
 import 'package:movie/features/movie_form/movie_form_screen.dart';
+import 'package:movie/features/movie_share/import_movie_modal.dart';
 import 'package:movie/features/statistics/statistics_screen.dart';
 import 'package:movie/features/watchlist/watchlist_screen.dart';
 import 'package:movie/models/movie.dart';
+import 'package:movie/services/movie_share_service.dart';
 import 'package:movie/widgets/movie_card.dart';
 
 class MovieDiaryApp extends StatelessWidget {
@@ -25,13 +28,26 @@ class MovieDiaryApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
+      onGenerateRoute: (settings) {
+        final name = settings.name ?? '/';
+        final uri = Uri.tryParse(name);
+        String? initialToken;
+        if (uri != null && uri.path.contains('/share/movie/')) {
+          initialToken = MovieShareService.instance.parseShareToken(name);
+        }
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (context) => HomeShell(initialShareToken: initialToken),
+        );
+      },
       home: const HomeShell(),
     );
   }
 }
 
 class HomeShell extends StatefulWidget {
-  const HomeShell({super.key});
+  final String? initialShareToken;
+  const HomeShell({super.key, this.initialShareToken});
 
   @override
   State<HomeShell> createState() => _HomeShellState();
@@ -39,6 +55,52 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
+  bool _handledInitialLink = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAndHandleInitialShareLink();
+    });
+  }
+
+  void _checkAndHandleInitialShareLink() {
+    if (_handledInitialLink) return;
+    _handledInitialLink = true;
+
+    String? token = widget.initialShareToken;
+
+    // Fallback: Check Uri.base (especially for web path or hash fragments)
+    if (token == null && kIsWeb) {
+      try {
+        final baseUri = Uri.base;
+        final rawPath =
+            baseUri.fragment.isNotEmpty && baseUri.fragment.startsWith('/')
+                ? baseUri.fragment
+                : baseUri.path;
+        if (rawPath.contains('/share/movie/')) {
+          token =
+              MovieShareService.instance.parseShareToken(baseUri.toString()) ??
+                  MovieShareService.instance.parseShareToken(rawPath);
+        }
+      } catch (_) {}
+    }
+
+    if (token != null && mounted) {
+      ImportMovieModal.show(
+        context,
+        initialInput: token,
+        onMovieAddedToWatchlist: () {
+          if (mounted) {
+            setState(() {
+              _index = 1; // Switch to Watchlist tab
+            });
+          }
+        },
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

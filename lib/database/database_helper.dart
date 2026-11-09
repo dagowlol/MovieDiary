@@ -230,6 +230,37 @@ class DatabaseHelper {
     final count = (result.isNotEmpty ? result.first['count'] as num? : null)?.toInt() ?? 0;
     if (count == 0) {
       await seedInitialData(db);
+    } else {
+      // Ensure sample shared movie exists for demo / testing
+      final sharedCountResult = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM ${Constants.tableSharedMovies}',
+      );
+      final sharedCount = (sharedCountResult.isNotEmpty
+              ? sharedCountResult.first['count'] as num?
+              : null)
+          ?.toInt() ?? 0;
+      if (sharedCount == 0) {
+        await db.insert(
+          Constants.tableSharedMovies,
+          const SharedMovie(
+            shareToken: 'mov_dpfcSrgl8R_pAIDzrsRJzA',
+            ownerId: 'user_alice_1',
+            senderName: 'Alice',
+            movieTitle: 'Inception',
+            director: 'Christopher Nolan',
+            releaseYear: 2010,
+            genre: 'Sci-Fi',
+            rating: 4.8,
+            review:
+                'Phim cực hay, kịch bản xoắn não và kỹ xảo đỉnh cao. Nhất định phải xem!',
+            posterUrl:
+                'https://image.tmdb.org/t/p/w500/ljsZTbVsrQSqZgWeep2B1QiDKuh.jpg',
+            createdAt: '2026-11-08T20:00:00.000000',
+            isRevoked: false,
+          ).toMap(),
+          conflictAlgorithm: ConflictAlgorithm.ignore,
+        );
+      }
     }
   }
 
@@ -240,6 +271,27 @@ class DatabaseHelper {
     for (final movie in initialMovies) {
       batch.insert(Constants.tableMovies, movie.toMap());
     }
+    // Seed initial sample shared movie
+    batch.insert(
+      Constants.tableSharedMovies,
+      const SharedMovie(
+        shareToken: 'mov_dpfcSrgl8R_pAIDzrsRJzA',
+        ownerId: 'user_alice_1',
+        senderName: 'Alice',
+        movieTitle: 'Inception',
+        director: 'Christopher Nolan',
+        releaseYear: 2010,
+        genre: 'Sci-Fi',
+        rating: 4.8,
+        review:
+            'Phim cực hay, kịch bản xoắn não và kỹ xảo đỉnh cao. Nhất định phải xem!',
+        posterUrl:
+            'https://image.tmdb.org/t/p/w500/ljsZTbVsrQSqZgWeep2B1QiDKuh.jpg',
+        createdAt: '2026-11-08T20:00:00.000000',
+        isRevoked: false,
+      ).toMap(),
+      conflictAlgorithm: ConflictAlgorithm.ignore,
+    );
     await batch.commit(noResult: true);
   }
 

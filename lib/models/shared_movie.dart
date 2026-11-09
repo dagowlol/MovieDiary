@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:movie/utils/constants.dart';
 
 class SharedMovie {
@@ -34,7 +35,17 @@ class SharedMovie {
   });
 
   /// The public sharing URL for this movie
-  String get shareUrl => '${Constants.shareBaseUrl}/$shareToken';
+  String get shareUrl {
+    if (kIsWeb) {
+      try {
+        final origin = Uri.base.origin;
+        if (origin.isNotEmpty && origin != 'null') {
+          return '$origin/share/movie/$shareToken';
+        }
+      } catch (_) {}
+    }
+    return '${Constants.shareBaseUrl}/$shareToken';
+  }
 
   Map<String, dynamic> toMap() {
     final map = <String, dynamic>{

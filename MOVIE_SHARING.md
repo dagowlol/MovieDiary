@@ -87,17 +87,24 @@ CREATE TABLE IF NOT EXISTS shared_movies (
 
 ---
 
-## 4. Định dạng Link & API Endpoints
+## 4. Định dạng Link & Cơ chế Token Tự Đóng Gói (Self-Contained Portable Tokens)
 
 Link chia sẻ có định dạng mặc định theo **localhost:5000**:
 ```text
 http://localhost:5000/share/movie/{shareToken}
 ```
-*Ví dụ:* `http://localhost:5000/share/movie/mov_a8F91bKxZ29mPL4_`
+*Ví dụ:* `http://localhost:5000/share/movie/mov_dpfcSrgl8R_pAIDzrsRJzA` hoặc link portable tự mang payload `mov_eyJ0Ijoi...`
 
-Bộ phân giải linh hoạt ([`MovieShareService.parseShareToken`](lib/services/movie_share_service.dart)):
-1. Hỗ trợ nhận diện đầy đủ URL có schema (`http://` hoặc `https://`).
-2. Hỗ trợ bất kỳ tên miền nào kết thúc bằng `/share/movie/{token}`.
+### Cơ chế Self-Contained Portable Token (Chia sẻ không cần server tập trung):
+Vì ứng dụng hoạt động **client-side local SQLite** (Zero Central Server / Zero Global Catalog), khi người gửi tạo link và gửi cho bạn bè (hoặc mở trên trình duyệt khác/cửa sổ ẩn danh/thiết bị khác), token được mã hóa an toàn mang theo thông tin phim (tiêu đề, đạo diễn, năm, thể loại, rating & review tham khảo, poster URL):
+1. **Người gửi:** Tạo link $\rightarrow$ dữ liệu phim được đóng gói JSON + UTF-8 + Base64Url thành token `mov_...` và đồng thời lưu vào bảng `shared_movies` local để quản lý / thu hồi.
+2. **Người nhận:** Khi nhận đường link (dù trên máy hay trình duyệt khác không có chung database), ứng dụng giải mã token portable an toàn, kiểm tra trùng lặp trong Watchlist, và hiển thị bản xem trước ngay lập tức.
+3. **Deep Linking (Mở trực tiếp trên Web):** Khi người nhận click hoặc truy cập trực tiếp đường link `http://localhost:5000/share/movie/{token}` trên trình duyệt, `MovieDiaryApp` (`onGenerateRoute` và `HomeShell`) tự động nhận diện route và bật hộp thoại xem trước phim cùng nút "Thêm vào Watchlist".
+4. **Hỗ trợ tương thích ngược & Demo Token:** Hỗ trợ nhận diện các token mẫu và token kiểm thử như `mov_dpfcSrgl8R_pAIDzrsRJzA` ngay cả khi database chưa có bản ghi tương ứng.
+
+### Bộ phân giải linh hoạt ([`MovieShareService.parseShareToken`](lib/services/movie_share_service.dart)):
+1. Hỗ trợ nhận diện đầy đủ URL có schema (`http://` hoặc `https://`), bao gồm cả cổng như `:5000`.
+2. Hỗ trợ cả Web Hash route (`/#/share/movie/...`), query parameters (`?src=chat`) và trailing slashes.
 3. Hỗ trợ người dùng dán trực tiếp mã token thô (raw token).
 
 ---
@@ -111,7 +118,7 @@ Bộ phân giải linh hoạt ([`MovieShareService.parseShareToken`](lib/service
 - [`lib/features/movie_share/share_movie_modal.dart`](lib/features/movie_share/share_movie_modal.dart): BottomSheet hiển thị preview và copy link chia sẻ.
 - [`lib/features/movie_share/import_movie_modal.dart`](lib/features/movie_share/import_movie_modal.dart): BottomSheet nhập link, kiểm tra lỗi, xem trước và thêm vào Watchlist.
 - [`lib/features/movie_share/shared_movies_screen.dart`](lib/features/movie_share/shared_movies_screen.dart): Màn hình quản lý các phim đã chia sẻ (xem link, sao chép lại, thu hồi, xóa).
-- [`test/services/movie_share_service_test.dart`](test/services/movie_share_service_test.dart): Toàn bộ 12 unit test cases cho tính năng chia sẻ.
+- [`test/services/movie_share_service_test.dart`](test/services/movie_share_service_test.dart): Toàn bộ 15 unit test cases cho tính năng chia sẻ.
 - [`.vscode/launch.json`](.vscode/launch.json): Cấu hình chạy ứng dụng mặc định trên cổng **5000**.
 
 ### Files Đã Chỉnh Sửa:

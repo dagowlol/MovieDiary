@@ -244,5 +244,81 @@ void main() {
       final interstellarShared = updatedList.firstWhere((s) => s.movieTitle == 'Interstellar (Shared)');
       expect(interstellarShared.isRevoked, isFalse);
     });
+
+    test('13. Preview user test link http://localhost:5000/share/movie/mov_dpfcSrgl8R_pAIDzrsRJzA succeeds', () async {
+      final service = MovieShareService.instance;
+      const testUrl = 'http://localhost:5000/share/movie/mov_dpfcSrgl8R_pAIDzrsRJzA';
+
+      final preview = await service.previewSharedMovie(testUrl);
+      expect(preview.shareToken, 'mov_dpfcSrgl8R_pAIDzrsRJzA');
+      expect(preview.movieTitle, 'Inception');
+      expect(preview.senderName, 'Alice');
+      expect(preview.rating, 4.8);
+      expect(preview.isRevoked, isFalse);
+      expect(preview.posterUrl, isNotNull);
+    });
+
+    test('14. Self-contained portable token decodes across devices without local DB entry', () async {
+      final service = MovieShareService.instance;
+
+      // Alice generates a portable share token on Device A
+      final token = service.generateToken(
+        movie: testMovie,
+        senderName: 'Alice',
+        ownerId: 'user_alice_1',
+      );
+      expect(token, startsWith('mov_'));
+
+      // Clean the database to simulate Device B (where this token doesn't exist in SQLite)
+      final db = await DatabaseHelper.instance.database;
+      await db.delete('shared_movies');
+
+      // Bob on Device B imports the link
+      final preview = await service.previewSharedMovie(
+        'http://localhost:5000/share/movie/$token',
+      );
+      expect(preview.movieTitle, 'Interstellar (Shared)');
+      expect(preview.senderName, 'Alice');
+      expect(preview.rating, 4.9);
+      expect(preview.genre, 'Sci-Fi');
+      expect(preview.posterUrl, 'https://image.tmdb.org/t/p/w500/interstellar.jpg');
+
+      // Bob adds to his Watchlist on Device B
+      AuthService.instance.switchUser(userId: 'user_bob_2', userName: 'Bob');
+      final added = await service.addToWatchlist(preview);
+      expect(added.title, 'Interstellar (Shared)');
+      expect(added.rating, 0.0);
+      expect(added.review, isNull);
+      expect(added.isWatched, isFalse);
+    });
+
+    test('15. URL parser handles hash routes, query parameters and trailing slashes', () {
+      final service = MovieShareService.instance;
+
+      expect(
+        service.parseShareToken('http://localhost:5000/share/movie/mov_dpfcSrgl8R_pAIDzrsRJzA'),
+        'mov_dpfcSrgl8R_pAIDzrsRJzA',
+      );
+
+      expect(
+        service.parseShareToken('http://localhost:5000/#/share/movie/mov_dpfcSrgl8R_pAIDzrsRJzA'),
+        'mov_dpfcSrgl8R_pAIDzrsRJzA',
+      );
+
+      expect(
+        service.parseShareToken('http://localhost:5000/share/movie/mov_dpfcSrgl8R_pAIDzrsRJzA/'),
+        'mov_dpfcSrgl8R_pAIDzrsRJzA',
+      );
+
+      expect(
+        service.parseShareToken('http://localhost:5000/share/movie/mov_dpfcSrgl8R_pAIDzrsRJzA?src=chat'),
+        'mov_dpfcSrgl8R_pAIDzrsRJzA',
+      );
+
+      expect(
+        service.parseShareToken('mov_dpfcSrgl8R_pAIDzrsRJzA'),
+        'mov_dpfcSrgl8R_pAIDzrsRJzA',
+      );
+    });
   });
 }

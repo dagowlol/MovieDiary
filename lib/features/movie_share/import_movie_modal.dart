@@ -5,12 +5,18 @@ import 'package:movie/services/auth_service.dart';
 import 'package:movie/services/movie_share_service.dart';
 
 class ImportMovieModal extends StatefulWidget {
+  final String? initialInput;
   final VoidCallback? onMovieAddedToWatchlist;
 
-  const ImportMovieModal({super.key, this.onMovieAddedToWatchlist});
+  const ImportMovieModal({
+    super.key,
+    this.initialInput,
+    this.onMovieAddedToWatchlist,
+  });
 
   static Future<void> show(
     BuildContext context, {
+    String? initialInput,
     VoidCallback? onMovieAddedToWatchlist,
   }) {
     return showModalBottomSheet(
@@ -20,8 +26,10 @@ class ImportMovieModal extends StatefulWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (ctx) =>
-          ImportMovieModal(onMovieAddedToWatchlist: onMovieAddedToWatchlist),
+      builder: (ctx) => ImportMovieModal(
+        initialInput: initialInput,
+        onMovieAddedToWatchlist: onMovieAddedToWatchlist,
+      ),
     );
   }
 
@@ -36,6 +44,19 @@ class _ImportMovieModalState extends State<ImportMovieModal> {
   SharedMovie? _previewMovie;
   bool _isAlreadyInWatchlist = false;
   bool _isAdding = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialInput != null && widget.initialInput!.trim().isNotEmpty) {
+      _linkController.text = widget.initialInput!.trim();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _fetchPreview();
+        }
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -112,7 +133,9 @@ class _ImportMovieModalState extends State<ImportMovieModal> {
       if (!mounted) return;
 
       widget.onMovieAddedToWatchlist?.call();
-      Navigator.of(context).pop();
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -180,7 +203,10 @@ class _ImportMovieModalState extends State<ImportMovieModal> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Hủy', style: TextStyle(color: Color(0xFF94A3B8))),
+            child: const Text(
+              'Hủy',
+              style: TextStyle(color: Color(0xFF94A3B8)),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -192,8 +218,10 @@ class _ImportMovieModalState extends State<ImportMovieModal> {
               Navigator.of(ctx).pop();
               _addToWatchlist();
             },
-            child: const Text('Đăng nhập ngay',
-                style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text(
+              'Đăng nhập ngay',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
@@ -244,7 +272,11 @@ class _ImportMovieModalState extends State<ImportMovieModal> {
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Color(0xFF94A3B8), size: 20),
+                    icon: const Icon(
+                      Icons.close,
+                      color: Color(0xFF94A3B8),
+                      size: 20,
+                    ),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
@@ -265,7 +297,10 @@ class _ImportMovieModalState extends State<ImportMovieModal> {
                     borderSide: const BorderSide(color: Color(0xFF242836)),
                   ),
                   suffixIcon: IconButton(
-                    icon: const Icon(Icons.paste_rounded, color: Color(0xFFF7BA34)),
+                    icon: const Icon(
+                      Icons.paste_rounded,
+                      color: Color(0xFFF7BA34),
+                    ),
                     tooltip: 'Dán từ clipboard',
                     onPressed: _pasteFromClipboard,
                   ),
@@ -316,8 +351,11 @@ class _ImportMovieModalState extends State<ImportMovieModal> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.error_outline,
-                          color: Colors.redAccent, size: 20),
+                      const Icon(
+                        Icons.error_outline,
+                        color: Colors.redAccent,
+                        size: 20,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -398,11 +436,14 @@ class _ImportMovieModalState extends State<ImportMovieModal> {
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      const Icon(Icons.person_outline,
-                                          color: Color(0xFFF7BA34), size: 14),
+                                      const Icon(
+                                        Icons.person_outline,
+                                        color: Color(0xFFF7BA34),
+                                        size: 14,
+                                      ),
                                       const SizedBox(width: 4),
                                       Text(
-                                        'Từ: ${_previewMovie!.senderName}',
+                                        '',
                                         style: const TextStyle(
                                           color: Colors.white,
                                           fontSize: 11.5,
@@ -422,8 +463,11 @@ class _ImportMovieModalState extends State<ImportMovieModal> {
                         const SizedBox(height: 12),
                         Row(
                           children: [
-                            const Icon(Icons.star_rounded,
-                                color: Color(0xFFF7BA34), size: 18),
+                            const Icon(
+                              Icons.star_rounded,
+                              color: Color(0xFFF7BA34),
+                              size: 18,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               'Đánh giá của bạn bè: ${_previewMovie!.rating.toStringAsFixed(1)} / 5.0',
@@ -480,8 +524,11 @@ class _ImportMovieModalState extends State<ImportMovieModal> {
                     ),
                     child: const Row(
                       children: [
-                        Icon(Icons.info_outline,
-                            color: Color(0xFFF7BA34), size: 18),
+                        Icon(
+                          Icons.info_outline,
+                          color: Color(0xFFF7BA34),
+                          size: 18,
+                        ),
                         SizedBox(width: 8),
                         Expanded(
                           child: Text(
